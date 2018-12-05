@@ -110,7 +110,7 @@
         var newPoint;
         var newPointArr = [];
         var press = 0;
-        for (var i = 0; i < points.length - 1; i++) {
+        for (var i = 0; i < points.length - 1; i++) {//*10000处理js计算小数位的误差
             newLat = points[i].lat * 10000;
             newLng = points[i].lng * 10000;
             var xOffset = ((10000*points[i + 1].lat - 10000*points[i].lat) / 50);
