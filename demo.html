@@ -81,7 +81,7 @@
             map.addControl(new BMap.ScaleControl());//左下角比例尺控件
             map.addControl(new BMap.OverviewMapControl({ isOpen: true }));//右下角小地图控件
 
-            //连接所有点,polyline
+            //连接所有点,polyline()
             map.addOverlay(new BMap.Polyline(points, { 
                 strokeColor: "black", 
                 strokeWeight: 5, 
@@ -118,7 +118,7 @@
             for (var j = 0; j < 50; j++) {
                 newLat += xOffset;
                 newLng += yOffset;
-                newPoint = new BMap.Point(newLng / 10000, newLat / 10000)
+                newPoint = new BMap.Point(newLng / 10000, newLat / 10000);
                 newPointArr.push(newPoint);
                 console.log(newPoint);  
             }
