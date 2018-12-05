@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>起点到终点的路径移动</title>
+    <style type="text/css">
+        html {
+            height: 100%
+        }
+
+        body {
+            height: 100%;
+            margin: 0px;
+            padding: 0px
+        }
+
+        #controller {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            border-bottom: 3px outset;
+            height: 30px;
+            filter: alpha(Opacity=100);
+            -moz-opacity: 1;
+            opacity: 1;
+            z-index: 10000;
+            background-color: lightblue;
+        }
+
+        #container {
+            height: 100%;
+            margin-top: 33px;
+            box-sizing: border-box
+        }
+    </style>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?ak=gA9Pide2YxOkzVRw02rraKaPNb0g8u1t&v=2.0"></script>
+    <script src="./jq.js"></script>
+    <script type="text/javascript">
+        //获取所有点的坐标
+        var points = [new BMap.Point(114.00100, 22.550000)];
+        // var points = [
+        //     new BMap.Point(114.00100, 22.550000),
+        //     new BMap.Point(114.00130, 22.550000),
+        //     new BMap.Point(114.00160, 22.550000),
+        //     new BMap.Point(114.00200, 22.550000),
+        //     new BMap.Point(114.00300, 22.550500),
+        //     new BMap.Point(114.00400, 22.550000),
+        //     new BMap.Point(114.00500, 22.550000), 
+        //     new BMap.Point(114.00505, 22.549800),
+        //     new BMap.Point(114.00510, 22.550000), 
+        //     new BMap.Point(114.00515, 22.550000),
+        //     new BMap.Point(114.00525, 22.550400), 
+        //     new BMap.Point(114.00537, 22.549500)
+        // ];
+        var myPoints = points;
+        var map; //百度地图对象
+        var car; //汽车图标
+        var label; //信息标签
+        var centerPoint;//地图中心点
+
+        var timer; //定时器
+        var index = 0; //记录播放到第几个point
+
+        var followChk, playBtn, pauseBtn, resetBtn; //几个控制按钮
+
+        function init() {//四个按钮
+            followChk = document.getElementById("follow");
+            playBtn = document.getElementById("play");
+            pauseBtn = document.getElementById("pause");
+            resetBtn = document.getElementById("reset");
+
+            //初始化地图,选取第一个点为起始点
+            map = new BMap.Map("container");
+            map.centerAndZoom(points[0], 15);//15为初始化地图缩放大小
+            map.enableScrollWheelZoom();//启用滚轮控制缩放,默认(不调用时)禁用
+            map.addControl(new BMap.NavigationControl());//左上角平移和缩放控件
+            map.addControl(new BMap.ScaleControl());//左下角比例尺控件
+            map.addControl(new BMap.OverviewMapControl({ isOpen: true }));//右下角小地图控件
+
+            //通过DrivingRoute获取一条路线的point
+
+            var driving = new BMap.DrivingRoute(map);//创建导航实例
+            driving.search(new BMap.Point(114.00100, 22.550000), new BMap.Point(113.95100, 22.550000));
+            driving.setSearchCompleteCallback(function () {
+                //得到路线上的所有point
+                points = driving.getResults().getPlan(0).getRoute(0).getPath();//这里就不是开始的点集合了,是一条线上的点集合
+                console.log('points', points)
+                //画面移动到起点和终点的中间,拿到中点,结合panTo,控制跟随移动,此处是初始化时控制地图的位置(加载页面会右移)
+                centerPoint = new BMap.Point((points[0].lng + points[points.length - 1].lng) / 2, (points[0].lat + points[points.length - 1].lat) / 2);
+                map.panTo(centerPoint);//panto设置地图中心点
+                //连接所有点,polyline
+                map.addOverlay(new BMap.Polyline(points, {
+                     strokeColor: "black", 
+                     strokeWeight: 5, 
+                     strokeOpacity: 1,
+                     enableMassClear: false 
+                }));
+
+                //显示小车子
+                label = new BMap.Label("", { offset: new BMap.Size(-20, -20) });
+                car = new BMap.Marker(points[0], {
+                    enableMassClear: false
+                });
+                car.setLabel(label);
+                map.addOverlay(car); //addOverlay:将创建的覆盖物实例添加至map中
+
+                //点亮操作按钮
+                playBtn.disabled = false;
+                resetBtn.disabled = false;
+            });
+        }
+        function flagLable() {
+            var flag;
+            flag = new BMap.Marker(myPoints[0]);
+            map.addOverlay(flag); 
+        }
+        function play() {
+            playBtn.disabled = true;
+            pauseBtn.disabled = false;
+
+            var point = points[index];
+            if (index > 0) {//轨迹红线
+                map.addOverlay(new BMap.Polyline([points[index - 1], point], { strokeColor: "red", strokeWeight: 1, strokeOpacity: 1 }));
+            }
+            console.log(points.length, 'point', point);
+            label.setContent("经度: " + point.lng + "<br>纬度: " + point.lat);//设置提示信息内容
+            car.setPosition(point);//设置覆盖物位置
+            index++;
+            if (followChk.checked) {
+                map.panTo(point);//动态跟随
+            }
+            if (index < points.length) {
+                timer = window.setTimeout("play(" + index + ")", 200);
+            } else {
+                playBtn.disabled = true;
+                pauseBtn.disabled = true;
+                map.panTo(point);//结束时跟随到起点
+            }
+        }
+
+        function pause() {
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+
+            if (timer) {
+                window.clearTimeout(timer);
+            }
+        }
+
+        function reset() {
+            followChk.checked = false;
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+
+            if (timer) {
+                window.clearTimeout(timer);
+            }
+            index = 0;
+            car.setPosition(points[0]);
+            map.panTo(centerPoint);//初始化跟随到起点
+            map.clearOverlays(); //清除地图上的轨迹
+        }
+    </script>
+</head>
+
+<body onload="init();">
+    <div id="controller" align="center">
+        <input id="follow" type="checkbox"><span style="font-size:12px;">画面跟随</span></input>
+        <input id="play" type="button" value="播放" onclick="play();" disabled />
+        <input id="pause" type="button" value="暂停" onclick="pause();" disabled />
+        <input id="reset" type="button" value="重置" onclick="reset()" disabled />
+        <input id="showPoint" type="button" value="显示位置" onclick="flagLable()" />
+    </div>
+    <div id="container"></div>
+</body>
+
+</html>
